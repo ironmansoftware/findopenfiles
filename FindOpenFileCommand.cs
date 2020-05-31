@@ -1,6 +1,8 @@
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Management.Automation;
+using System.Runtime.InteropServices;
 
 namespace FindOpenFiles
 {
@@ -20,6 +22,11 @@ namespace FindOpenFiles
 
         protected override void ProcessRecord()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new Exception("This cmdlet is only supported on Windows.");
+            }
+
             if (ParameterSetName == AllParameterSet)
             {
                 if (System)

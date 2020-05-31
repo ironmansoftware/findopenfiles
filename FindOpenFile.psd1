@@ -12,7 +12,7 @@
 RootModule = 'findopenfiles.dll'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '1.0.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -95,10 +95,10 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @('windows')
 
         # A URL to the license for this module.
-        # LicenseUri = ''
+        LicenseUri = 'https://github.com/ironmansoftware/findopenfiles/blob/master/LICENSE.md'
 
         # A URL to the main website for this project.
         ProjectUri = 'https://github.com/ironmansoftware/findopenfiles'
@@ -107,7 +107,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        ReleaseNotes = 'https://github.com/ironmansoftware/findopenfiles/blob/master/CHANGELOG.md'
 
         # Prerelease string of this module
         # Prerelease = ''
