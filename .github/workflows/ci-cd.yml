@@ -63,6 +63,6 @@ jobs:
         PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
       run: |
         $modulePath = ".\bin\Release\netstandard2.0"
-        Rename-Item ".\bin\Release\netstandard2.0" -NewName ".\bin\Release\FindOpenFile"
+        Rename-Item ".\bin\Release\netstandard2.0" -NewName "FindOpenFile"
         $modulePath = ".\bin\Release\FindOpenFile"
         Publish-Module -Path $modulePath -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose
