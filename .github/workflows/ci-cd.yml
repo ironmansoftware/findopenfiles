@@ -32,6 +32,8 @@ jobs:
       run: |
         Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
         Invoke-Pester -Path .\Tests\FindOpenFile.Tests.ps1 -Output Detailed
+      env:
+        BUILD_CONFIGURATION: Release
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
