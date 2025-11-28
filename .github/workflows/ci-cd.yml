@@ -18,7 +18,8 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '6.0.x'
+        global-json-file: global.json
+        
     
     - name: Restore dependencies
       run: dotnet restore
@@ -30,7 +31,9 @@ jobs:
       shell: pwsh
       run: |
         Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
-        Invoke-Pester -Path .\Tests\FindOpenFile.Tests.ps1 -Output Detailed -Configuration @{ Run = @{ Container = New-PesterContainer -Path .\Tests\FindOpenFile.Tests.ps1 -Data @{ Configuration = 'Release' } } }
+        Invoke-Pester -Path .\Tests\FindOpenFile.Tests.ps1 -Output Detailed
+      env:
+        BUILD_CONFIGURATION: Release
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -49,7 +52,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '6.0.x'
+        dotnet-version: '10.0.x'
     
     - name: Build Release
       run: dotnet build --configuration Release
