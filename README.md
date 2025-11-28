@@ -83,6 +83,16 @@ PS C:\Users\adamr> Find-OpenFile -FilePath C:\Windows\System32\en-US\KernelBase.
      27    14.69      48.04       3.91   11624   1 LockApp
 ```
 
+Find processes accessing a folder or files within it
+
+```
+PS C:\Users\adamr> Find-OpenFile -FilePath C:\Test
+
+ NPM(K)    PM(M)      WS(M)     CPU(s)      Id  SI ProcessName
+ ------    -----      -----     ------      --  -- -----------
+     56    50.62      74.23      10.42   15136   1 notepad
+```
+
 ## Source
 
 - C# Code Forked from [this repository](https://github.com/Walkman100/FileLocks)

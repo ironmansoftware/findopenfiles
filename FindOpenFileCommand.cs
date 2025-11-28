@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Runtime.InteropServices;
@@ -42,7 +43,17 @@ namespace FindOpenFiles
             {
                 FilePath = GetUnresolvedProviderPathFromPSPath(FilePath);
 
-                WriteObject(WalkmanLib.RestartManager.GetLockingProcesses(FilePath), true);   
+                // Check if the path is a directory
+                if (Directory.Exists(FilePath))
+                {
+                    // For directories, use the GetAllHandles approach
+                    WriteObject(WalkmanLib.GetFileLocks.GetAllHandles.GetProcessesLockingDirectory(FilePath), true);
+                }
+                else
+                {
+                    // For files, use the RestartManager approach
+                    WriteObject(WalkmanLib.RestartManager.GetLockingProcesses(FilePath), true);
+                }
             }
             else if (ParameterSetName == ProcessParameterSet)
             {
