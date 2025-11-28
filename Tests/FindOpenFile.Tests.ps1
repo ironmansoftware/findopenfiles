@@ -1,10 +1,15 @@
-param(
-    [Parameter()]
-    [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Debug'
-)
-
 BeforeAll {
+    # Get configuration from environment variable, default to 'Debug' if not set
+    $Configuration = $env:BUILD_CONFIGURATION
+    if ([string]::IsNullOrWhiteSpace($Configuration)) {
+        $Configuration = 'Debug'
+    }
+    
+    # Validate configuration value
+    if ($Configuration -notin @('Debug', 'Release')) {
+        throw "Invalid BUILD_CONFIGURATION value: '$Configuration'. Must be 'Debug' or 'Release'."
+    }
+    
     # Import the module from the specified build configuration directory
     $modulePath = Join-Path $PSScriptRoot "..\bin\$Configuration\netstandard2.0\FindOpenFile.psd1"
     
