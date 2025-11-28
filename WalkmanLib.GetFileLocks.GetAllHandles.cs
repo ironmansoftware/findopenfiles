@@ -383,6 +383,7 @@ namespace WalkmanLib.GetFileLocks
             }
         }
 
+        private static readonly object _deviceMapLock = new object();
         private static Dictionary<string, string> _deviceToDriveMap;
 
         /// <summary>
@@ -393,17 +394,24 @@ namespace WalkmanLib.GetFileLocks
             if (string.IsNullOrEmpty(devicePath))
                 return null;
 
-            // Initialize the device to drive map if needed
+            // Thread-safe lazy initialization of device to drive map
             if (_deviceToDriveMap == null)
             {
-                _deviceToDriveMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (string drive in System.IO.Directory.GetLogicalDrives())
+                lock (_deviceMapLock)
                 {
-                    string driveLetter = drive.TrimEnd('\\');
-                    string deviceName = QueryDosDevice(driveLetter);
-                    if (deviceName != null)
+                    if (_deviceToDriveMap == null)
                     {
-                        _deviceToDriveMap[deviceName] = driveLetter;
+                        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (string drive in System.IO.Directory.GetLogicalDrives())
+                        {
+                            string driveLetter = drive.TrimEnd('\\');
+                            string deviceName = QueryDosDevice(driveLetter);
+                            if (deviceName != null)
+                            {
+                                map[deviceName] = driveLetter;
+                            }
+                        }
+                        _deviceToDriveMap = map;
                     }
                 }
             }
@@ -452,7 +460,11 @@ namespace WalkmanLib.GetFileLocks
                     {
                         processes.Add(System.Diagnostics.Process.GetProcessById(hi.ProcessId));
                     }
-                    catch (ArgumentException) { } // Process no longer exists
+                    catch (ArgumentException)
+                    {
+                        // Process no longer exists - this is expected as processes can terminate
+                        // between the time we enumerate handles and try to get the process
+                    }
                 }
             }
 
