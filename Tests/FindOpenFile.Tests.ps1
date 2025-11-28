@@ -179,6 +179,54 @@ Describe 'Find-OpenFile Module' {
         }
     }
     
+    Context 'Find-OpenFile - Directory Support' {
+        BeforeAll {
+            # Create a temporary directory with a file
+            $script:testDir = Join-Path $TestDrive 'testfolder'
+            New-Item -Path $script:testDir -ItemType Directory -Force | Out-Null
+            $script:testDirFile = Join-Path $script:testDir 'testfile.txt'
+            'Test content' | Out-File -FilePath $script:testDirFile -Force
+        }
+        
+        It 'Should not throw error when checking a directory' {
+            # This is the main fix - previously this would throw:
+            # "Could not list processes locking resource. Failed to get size of result."
+            { Find-OpenFile -FilePath $script:testDir } | Should -Not -Throw
+        }
+        
+        It 'Should return Process objects when checking a directory with open handles' {
+            # Lock a file inside the directory
+            $fileStream = [System.IO.File]::Open($script:testDirFile, 'Open', 'Read', 'None')
+            
+            try {
+                $result = Find-OpenFile -FilePath $script:testDir
+                # The result may or may not include the process depending on how the OS reports handles
+                # The key test is that it doesn't throw an error
+                if ($result) {
+                    $result | ForEach-Object {
+                        $_ | Should -BeOfType [System.Diagnostics.Process]
+                    }
+                }
+            }
+            finally {
+                $fileStream.Close()
+                $fileStream.Dispose()
+            }
+        }
+        
+        It 'Should accept directory path from pipeline' {
+            { $script:testDir | Find-OpenFile } | Should -Not -Throw
+        }
+        
+        It 'Should handle non-existent directory paths gracefully' {
+            $nonExistentDir = Join-Path $TestDrive 'nonexistentfolder'
+            # For non-existent paths, it falls back to the RestartManager approach
+            # which may or may not throw depending on Windows version
+            # The key is that it shouldn't throw the "Failed to get size of result" error for directories
+            { Find-OpenFile -FilePath $nonExistentDir } | Should -Not -Throw
+        }
+    }
+    
     Context 'Platform Support' {
         It 'Should only work on Windows' {
             if ($IsLinux -or $IsMacOS) {

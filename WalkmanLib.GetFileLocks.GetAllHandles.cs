@@ -343,5 +343,120 @@ namespace WalkmanLib.GetFileLocks
                     yield return hi;
             }
         }
+
+        /// <summary>
+        /// Gets handles that match the specified directory path.
+        /// This method is used for finding processes that have a handle to a directory.
+        /// </summary>
+        /// <param name="directoryPath">The full path to the directory to search for.</param>
+        /// <returns>A list of HandleInfo objects for handles matching the directory.</returns>
+        public static IEnumerable<HandleInfo> GetDirectoryHandles(string directoryPath)
+        {
+            // Normalize the path for comparison
+            directoryPath = directoryPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            
+            // Convert to device path format for comparison
+            // Windows handles use paths like \Device\HarddiskVolume3\path
+            // We need to match against the end portion of the path
+            string normalizedPath = directoryPath.Replace(System.IO.Path.AltDirectorySeparatorChar, System.IO.Path.DirectorySeparatorChar);
+
+            foreach (HandleInfo hi in GetFileHandles())
+            {
+                if (hi.Name != null)
+                {
+                    // The handle name is in device path format (e.g., \Device\HarddiskVolume3\Users\test)
+                    // We need to check if it ends with our directory path or starts with it (for files within)
+                    string handlePath = hi.Name;
+                    
+                    // Try to convert the device path to a DOS path for comparison
+                    string dosPath = ConvertDevicePathToDosPath(handlePath);
+                    if (dosPath != null)
+                    {
+                        dosPath = dosPath.TrimEnd(System.IO.Path.DirectorySeparatorChar);
+                        if (string.Equals(dosPath, normalizedPath, StringComparison.OrdinalIgnoreCase) ||
+                            dosPath.StartsWith(normalizedPath + System.IO.Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                        {
+                            yield return hi;
+                        }
+                    }
+                }
+            }
+        }
+
+        private static Dictionary<string, string> _deviceToDriveMap;
+
+        /// <summary>
+        /// Converts a device path (e.g., \Device\HarddiskVolume3\path) to a DOS path (e.g., C:\path).
+        /// </summary>
+        private static string ConvertDevicePathToDosPath(string devicePath)
+        {
+            if (string.IsNullOrEmpty(devicePath))
+                return null;
+
+            // Initialize the device to drive map if needed
+            if (_deviceToDriveMap == null)
+            {
+                _deviceToDriveMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string drive in System.IO.Directory.GetLogicalDrives())
+                {
+                    string driveLetter = drive.TrimEnd('\\');
+                    string deviceName = QueryDosDevice(driveLetter);
+                    if (deviceName != null)
+                    {
+                        _deviceToDriveMap[deviceName] = driveLetter;
+                    }
+                }
+            }
+
+            // Try to find a matching device prefix
+            foreach (var kvp in _deviceToDriveMap)
+            {
+                if (devicePath.StartsWith(kvp.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return kvp.Value + devicePath.Substring(kvp.Key.Length);
+                }
+            }
+
+            return null;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern uint QueryDosDevice(string lpDeviceName, System.Text.StringBuilder lpTargetPath, uint ucchMax);
+
+        private static string QueryDosDevice(string driveLetter)
+        {
+            var buffer = new System.Text.StringBuilder(260);
+            if (QueryDosDevice(driveLetter, buffer, (uint)buffer.Capacity) != 0)
+            {
+                return buffer.ToString();
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Gets processes that have a handle to the specified directory or files within it.
+        /// </summary>
+        /// <param name="directoryPath">The full path to the directory.</param>
+        /// <returns>A list of unique Process objects.</returns>
+        public static List<System.Diagnostics.Process> GetProcessesLockingDirectory(string directoryPath)
+        {
+            var processIds = new HashSet<int>();
+            var processes = new List<System.Diagnostics.Process>();
+
+            foreach (HandleInfo hi in GetDirectoryHandles(directoryPath))
+            {
+                if (!processIds.Contains(hi.ProcessId))
+                {
+                    processIds.Add(hi.ProcessId);
+                    try
+                    {
+                        processes.Add(System.Diagnostics.Process.GetProcessById(hi.ProcessId));
+                    }
+                    catch (ArgumentException) { } // Process no longer exists
+                }
+            }
+
+            return processes;
+        }
     }
 }
