@@ -1,0 +1,63 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '6.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Run Pester tests
+      shell: pwsh
+      run: |
+        Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
+        Invoke-Pester -Path .\Tests\FindOpenFile.Tests.ps1 -Output Detailed -Configuration @{ Run = @{ Container = New-PesterContainer -Path .\Tests\FindOpenFile.Tests.ps1 -Data @{ Configuration = 'Release' } } }
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: module
+        path: bin/Release/netstandard2.0/
+
+  publish:
+    needs: build
+    runs-on: windows-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '6.0.x'
+    
+    - name: Build Release
+      run: dotnet build --configuration Release
+    
+    - name: Publish to PowerShell Gallery
+      shell: pwsh
+      env:
+        PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+      run: |
+        $modulePath = ".\bin\Release\netstandard2.0"
+        Publish-Module -Path $modulePath -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose
