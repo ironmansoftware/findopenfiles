@@ -1,6 +1,6 @@
 @{
     RootModule = 'findopenfiles.dll'
-    ModuleVersion = '1.0.1'
+    ModuleVersion = '1.1.0'
     GUID = 'ed3d6408-fe70-40e3-adae-c43dfe1b88ae'
     Author = 'Adam Driscoll'
     CompanyName = 'Ironman Software'
